@@ -2,7 +2,7 @@ import random
 import string
 from hashlib import blake2b
 
-from flask import Flask
+from flask import Flask, redirect
 from flask_restful import reqparse, fields, Resource, marshal_with, Api
 from flask_sqlalchemy import SQLAlchemy
 
@@ -15,7 +15,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_name}"
 app.config["SQLALCHEMY_TRACK_MODIFATIONS"] = False
 
 db = SQLAlchemy()
-
 
 db.init_app(app)
 
@@ -73,18 +72,32 @@ class URLs(Resource):
 
 class URL(Resource):
     @marshal_with(url_fields)
-    def get(self, id):
-        result = URLModel.query.filter_by(id=id).first()
+    def get(self, key):
+        result = URLModel.query.filter_by(key=key).first()
+        return result
+
+    @marshal_with(url_fields)
+    def delete(self, key):
+        result = URLModel.query.filter_by(key=key).first()
         return result
 
 
 api.add_resource(URLs, "/api/urls/")
-api.add_resource(URL, "/api/urls/<int:id>")
+api.add_resource(URL, "/api/urls/<string:key>")
 
 
 @app.route("/")
 def home():
     return "<h1>It works.</h1>"
+
+
+@app.route("/<key>")
+def url_redirect(key):
+    result = URLModel.query.filter_by(key=key).first()
+    if result:
+        long_url = result.long_url
+        return redirect(long_url, 302)
+    return {"error": {"message": "URL not found"}}, 404
 
 
 if __name__ == "__main__":
