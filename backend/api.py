@@ -2,7 +2,7 @@ import random
 import string
 from hashlib import blake2b
 
-from flask import Flask, redirect
+from flask import Flask, redirect, request, Response
 from flask_restful import reqparse, fields, Resource, marshal_with, Api
 from flask_sqlalchemy import SQLAlchemy
 
@@ -91,12 +91,17 @@ def home():
     return "<h1>It works.</h1>"
 
 
-@app.route("/<key>")
+@app.route("/<key>", methods=["GET", "DELETE"])
 def url_redirect(key):
     result = URLModel.query.filter_by(key=key).first()
     if result:
         long_url = result.long_url
-        return redirect(long_url, 302)
+        if request.method == "GET":
+            return redirect(long_url, 302)
+        elif request.method == "DELETE":
+            db.session.delete(result)
+            db.session.commit()
+            return Response({}, 200)
     return {"error": {"message": "URL not found"}}, 404
 
 
