@@ -1,13 +1,13 @@
-from hashlib import blake2b
 import random
 import string
-import click
-from flask import Flask, jsonify, request
+from hashlib import blake2b
+
+from flask import Flask
+from flask_restful import reqparse, fields, Resource, marshal_with, Api
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
-import sqlite3
 
 app = Flask(__name__)
+api = Api(app)
 
 db_name = "test_db.db"
 
@@ -16,86 +16,75 @@ app.config["SQLALCHEMY_TRACK_MODIFATIONS"] = False
 
 db = SQLAlchemy()
 
+
 db.init_app(app)
 
 
-class URL(db.Model):
-    __tablename__ = "urls"
+class URLModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    url_hash = db.Column(db.String, unique=True)
+    key = db.Column(db.String, unique=True)
     long_url = db.Column(db.String)
     short_url = db.Column(db.String)
 
     def __repr__(self):
-        return f"URL(url_hash= {self.url_hash}, short_url={self.short_url})"
+        return f"URL(key= {self.key}, long_url={self.long_url}, short_url={self.short_url})"
 
 
-links = [
-    # {
-    #     "key": "blabla",
-    #     "long_url": "https://codingchallenges.fyi/challenges/challenge-url-shortener/",
-    #     "short_url": "http://localhost:5000/blabla",
-    # }
-]
+url_args = reqparse.RequestParser()
+url_args.add_argument("url", type=str, required=True, help="URL cannot be blank")
+
+url_fields = {
+    "key": fields.String,
+    "long_url": fields.String,
+    "short_url": fields.String,
+}
+
+
+class URLs(Resource):
+    @marshal_with(url_fields)
+    def get(self):
+        result = URLModel.query.all()
+        return result
+
+    @marshal_with(url_fields)
+    def post(self):
+        args = url_args.parse_args()
+
+        long_url = args["url"]
+        key = blake2b(long_url.encode(), digest_size=4).hexdigest()
+        url = URLModel.query.filter_by(key=key).first()
+
+        if url and url.long_url != long_url:
+            random_str = "".join(
+                random.choice(string.ascii_letters + string.digits) for _ in range(4)
+            )
+            key = blake2b(f"{long_url}{random_str}".encode(), digest_size=4).hexdigest()
+        elif url:
+            return url, 409
+
+        short_url = f"http://localhost:5000/{key}"
+
+        url = URLModel(key=key, long_url=long_url, short_url=short_url)
+
+        db.session.add(url)
+        db.session.commit()
+        return url, 201
+
+
+class URL(Resource):
+    @marshal_with(url_fields)
+    def get(self, id):
+        result = URLModel.query.filter_by(id=id).first()
+        return result
+
+
+api.add_resource(URLs, "/api/urls/")
+api.add_resource(URL, "/api/urls/<int:id>")
 
 
 @app.route("/")
-def testdb():
-    for link in links:
-        url = URL(
-            url_hash=link["key"], long_url=link["long_url"], short_url=link["short_url"]
-        )
-        db.session.add(url)
-    db.session.commit()
-
+def home():
     return "<h1>It works.</h1>"
-
-
-@app.route("/links", methods=["GET"])
-def get_shorten_urls():
-    urls = URL.query.all()
-
-    for url in urls:
-        print(url.url_hash)
-    return jsonify(links), 200
-
-
-@app.route("/shortner", methods=["POST"])
-def create_shorten_url():
-    if not request.json:
-        return jsonify({"error": "Request body must be JSON"}), 400
-
-    new_link = request.json
-
-    url = new_link.get("url")
-    key = blake2b(url.encode(), digest_size=4).hexdigest()
-
-    url_hash = URL.query.filter_by(url_hash=key).first()
-
-    if url_hash and url_hash.long_url != url:
-        random_str = "".join(
-            random.choice(string.ascii_letters + string.digits) for _ in range(4)
-        )
-        key = blake2b(f"{url}{random_str}".encode(), digest_size=4).hexdigest()
-    elif url_hash:
-        return (
-            jsonify(
-                {
-                    "key": f"{key}",
-                    "long_url": new_link["url"],
-                    "short_url": f"http://localhost:5000/{key}",
-                }
-            ),
-            409,
-        )
-
-    item = {
-        "key": f"{key}",
-        "long_url": new_link["url"],
-        "short_url": f"http://localhost:5000/{key}",
-    }
-    links.append(item)
-    return jsonify(item), 201
 
 
 if __name__ == "__main__":
