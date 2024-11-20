@@ -26,9 +26,8 @@ class URL(db.Model):
     long_url = db.Column(db.String)
     short_url = db.Column(db.String)
 
-
-with app.app_context():
-    db.create_all()
+    def __repr__(self):
+        return f"URL(url_hash= {self.url_hash}, short_url={self.short_url})"
 
 
 links = [
