@@ -1,3 +1,55 @@
-.venv/
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Flask and Python specific
 __pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+env/
+*.egg-info/
+build/
+*.egg
+
+# Flask instance folder
 instance/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Flask-specific
+.webassets-cache
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+*.swp
+*.swo
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Dependency management
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Compiled Python bytecode
+*.pyc
+
+# Flask debug toolbar
+flask_debugtoolbar.db
