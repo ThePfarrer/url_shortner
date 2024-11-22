@@ -4,6 +4,7 @@ import axios from "axios"
 
 const longUrl = ref("");
 const shortUrl = ref("")
+const toggle = ref(true)
 
 const shortenURL = async () => {
     try {
@@ -14,6 +15,14 @@ const shortenURL = async () => {
         console.error("Error sending data:",error)
 
     }
+    toggle.value = !toggle.value
+}
+
+const shortenAnotherURL = () => {
+    longUrl.value = ""
+    shortUrl.value = ""
+    toggle.value = !toggle.value
+
 }
 </script>
 
@@ -22,11 +31,22 @@ const shortenURL = async () => {
     <h1>URL Shortener</h1>
     <form @submit.prevent="shortenURL">
       <input v-model="longUrl" type="text" placeholder="Enter a long URL here" required />
-      <button type="submit">Shorten URL</button>
+      <p v-if="shortUrl">
+        Short URL: <a :href="shortUrl" target="_blank">{{ shortUrl }}</a>
+      </p>
+
+      <div class="box" v-if="toggle">
+        <button type="submit" class="">Shorten URL</button>
+      </div>
     </form>
-    <p v-if="shortUrl">
-      Short URL: <a :href="shortUrl" target="_blank">{{ shortUrl }}</a>
-    </p>
+    <div class="container" v-if="!toggle">
+      <div class="box">
+        <a href="/app/my-urls"> My URLs </a>
+      </div>
+      <div class="box">
+        <button @click="shortenAnotherURL">Shorten another</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -50,5 +70,14 @@ button {
 }
 button:hover {
   background-color: #0056b3;
+}
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.box {
+  text-align: center;
 }
 </style>
