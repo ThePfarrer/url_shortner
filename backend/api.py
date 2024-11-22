@@ -5,8 +5,10 @@ from hashlib import blake2b
 from flask import Flask, redirect, request, Response
 from flask_restful import reqparse, fields, Resource, marshal_with, Api
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 api = Api(app)
 
 db_name = "test_db.db"
@@ -14,9 +16,7 @@ db_name = "test_db.db"
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_name}"
 app.config["SQLALCHEMY_TRACK_MODIFATIONS"] = False
 
-db = SQLAlchemy()
-
-db.init_app(app)
+db = SQLAlchemy(app)
 
 
 class URLModel(db.Model):
@@ -26,7 +26,9 @@ class URLModel(db.Model):
     short_url = db.Column(db.String)
 
     def __repr__(self):
-        return f"URL(key= {self.key}, long_url={self.long_url}, short_url={self.short_url})"
+        return (
+            f"URL(key={self.key}, long_url={self.long_url}, short_url={self.short_url})"
+        )
 
 
 url_args = reqparse.RequestParser()
@@ -59,7 +61,7 @@ class URLs(Resource):
             )
             key = blake2b(f"{long_url}{random_str}".encode(), digest_size=4).hexdigest()
         elif url:
-            return url, 409
+            return url, 200
 
         short_url = f"http://localhost:5000/{key}"
 
