@@ -24,7 +24,9 @@ const shortenURL = async () => {
       <input v-model="longUrl" type="text" placeholder="Enter a long URL here" required />
       <button type="submit">Shorten URL</button>
     </form>
-
+    <p v-if="shortUrl">
+      Short URL: <a :href="shortUrl" target="_blank">{{ shortUrl }}</a>
+    </p>
   </div>
 </template>
 
