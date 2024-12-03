@@ -115,6 +115,18 @@ func getURLByKey(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, result)
 }
 
+func deleteURLByKey(c *gin.Context) {
+	key := c.Param("key")
+
+	_, err := db.Exec("DELETE FROM url_model WHERE key = ?", key)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "url not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{})
+}
+
 func hashKey(url string) string {
 	hash, _ := blake2b.New(4, nil)
 	hash.Write([]byte(url))
@@ -134,6 +146,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/api/urls/", getURLs)
 	router.GET("/:key", getURLByKey)
+	router.DELETE("/:key", deleteURLByKey)
 	router.POST("/api/urls/", postURLs)
 
 	router.Run("localhost:8080")
