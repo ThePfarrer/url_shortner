@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/blake2b"
@@ -139,6 +140,8 @@ func main() {
 	fmt.Println("Connected!")
 
 	router := gin.Default()
+
+	router.Use(cors.Default())
 	router.GET("/api/urls/", getURLs)
 	router.GET("/:key", getURLByKey)
 	router.DELETE("/:key", deleteURLByKey)
