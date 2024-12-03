@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"math/rand"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -36,10 +37,32 @@ func postURLs(c *gin.Context) {
 
 	newURL.LongUrl = inputURL.URL
 	newURL.Key = hashKey(inputURL.URL)
+
+	for _, a := range urls {
+		if a.Key == newURL.Key {
+			if a.LongUrl != newURL.LongUrl {
+				randomStr := randomString(4)
+				newURL.Key = hashKey(inputURL.URL + randomStr)
+			} else {
+				c.IndentedJSON(http.StatusOK, a)
+				return
+			}
+		}
+	}
+
 	newURL.ShortUrl = "http://localhost:8080/" + newURL.Key
 
 	urls = append(urls, newURL)
 	c.IndentedJSON(http.StatusCreated, newURL)
+}
+
+func randomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(result)
 }
 
 func getURLByKey(c *gin.Context) {
