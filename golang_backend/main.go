@@ -108,7 +108,8 @@ func getURLByKey(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, result)
+	// c.IndentedJSON(http.StatusOK, result)
+	c.Redirect(http.StatusFound, result.LongUrl)
 }
 
 func deleteURLByKey(c *gin.Context) {
