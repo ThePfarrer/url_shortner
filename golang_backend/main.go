@@ -52,7 +52,6 @@ func getURLs(c *gin.Context) {
 }
 
 func postURLs(c *gin.Context) {
-	var newURL, result url
 	var inputURL urlArgs
 
 	if err := c.BindJSON(&inputURL); err != nil {
@@ -60,36 +59,32 @@ func postURLs(c *gin.Context) {
 		return
 	}
 
-	newURL.LongUrl = inputURL.URL
-	newURL.Key = hashKey(inputURL.URL)
+	longUrl := inputURL.URL
+	baseUrl := "http://localhost:8080/"
 
-	row := db.QueryRow("SELECT key, long_url FROM url_model WHERE key = ?", newURL.Key)
-	err := row.Scan(&result.Key, &result.LongUrl)
-	if err != nil {
-		newURL.ShortUrl = "http://localhost:8080/" + newURL.Key
+	key := hashKey(inputURL.URL)
+	var result url
 
-		_, err := db.Exec("INSERT INTO url_model (key, long_url, short_url) VALUES (?,?,?)", newURL.Key, newURL.LongUrl, newURL.ShortUrl)
-		if err != nil {
-			log.Print(err)
+	row := db.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
+	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
+	if err == nil {
+		if longUrl == result.LongUrl {
+			c.IndentedJSON(http.StatusOK, result)
 			return
-		}
 
-		c.IndentedJSON(http.StatusCreated, newURL)
+		}
+		key = hashKey(inputURL.URL + randomString(4))
+	}
+
+	shortUrl := baseUrl + key
+
+	_, err = db.Exec("INSERT INTO url_model (key, long_url, short_url) VALUES (?,?,?)", key, longUrl, shortUrl)
+	if err != nil {
+		log.Print(err)
 		return
 	}
 
-	// for _, a := range urls {
-	// 	if a.Key == newURL.Key {
-	// 		if a.LongUrl != newURL.LongUrl {
-	// 			randomStr := randomString(4)
-	// 			newURL.Key = hashKey(inputURL.URL + randomStr)
-	// 		} else {
-	// 			c.IndentedJSON(http.StatusOK, a)
-	// 			return
-	// 		}
-	// 	}
-	// }
-	c.IndentedJSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusCreated, url{Key: key, LongUrl: longUrl, ShortUrl: shortUrl})
 }
 
 func randomString(length int) string {
