@@ -1,11 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/hex"
+	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -16,44 +20,76 @@ type url struct {
 }
 
 type urlArgs struct {
-	URL string `json:"url"`
+	URL string `json:"url" binding:"required"`
 }
 
-var urls = []url{
-	{Key: "a105c5c1", LongUrl: "https://www.example.com", ShortUrl: "http://localhost:8080/a105c5c1"},
-}
+var db *sql.DB
 
 func getURLs(c *gin.Context) {
+	var urls []url
+
+	rows, err := db.Query("SELECT key, long_url, short_url FROM url_model")
+	if err != nil {
+		log.Fatalf("Error: %q", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row url
+		err = rows.Scan(&row.Key, &row.LongUrl, &row.ShortUrl)
+		if err != nil {
+			log.Fatal(err)
+		}
+		urls = append(urls, row)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	c.IndentedJSON(http.StatusOK, urls)
 }
 
 func postURLs(c *gin.Context) {
-	var newURL url
+	var newURL, result url
 	var inputURL urlArgs
 
 	if err := c.BindJSON(&inputURL); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	newURL.LongUrl = inputURL.URL
 	newURL.Key = hashKey(inputURL.URL)
 
-	for _, a := range urls {
-		if a.Key == newURL.Key {
-			if a.LongUrl != newURL.LongUrl {
-				randomStr := randomString(4)
-				newURL.Key = hashKey(inputURL.URL + randomStr)
-			} else {
-				c.IndentedJSON(http.StatusOK, a)
-				return
-			}
+	row := db.QueryRow("SELECT key, long_url FROM url_model WHERE key = ?", newURL.Key)
+	err := row.Scan(&result.Key, &result.LongUrl)
+	if err != nil {
+		newURL.ShortUrl = "http://localhost:8080/" + newURL.Key
+
+		_, err := db.Exec("INSERT INTO url_model (key, long_url, short_url) VALUES (?,?,?)", newURL.Key, newURL.LongUrl, newURL.ShortUrl)
+		if err != nil {
+			log.Print(err)
+			return
 		}
+
+		c.IndentedJSON(http.StatusCreated, newURL)
+		return
 	}
 
-	newURL.ShortUrl = "http://localhost:8080/" + newURL.Key
-
-	urls = append(urls, newURL)
-	c.IndentedJSON(http.StatusCreated, newURL)
+	// for _, a := range urls {
+	// 	if a.Key == newURL.Key {
+	// 		if a.LongUrl != newURL.LongUrl {
+	// 			randomStr := randomString(4)
+	// 			newURL.Key = hashKey(inputURL.URL + randomStr)
+	// 		} else {
+	// 			c.IndentedJSON(http.StatusOK, a)
+	// 			return
+	// 		}
+	// 	}
+	// }
+	c.IndentedJSON(http.StatusOK, result)
 }
 
 func randomString(length int) string {
@@ -67,14 +103,16 @@ func randomString(length int) string {
 
 func getURLByKey(c *gin.Context) {
 	key := c.Param("key")
+	var result url
 
-	for _, a := range urls {
-		if a.Key == key {
-			c.IndentedJSON(http.StatusOK, a)
-			return
-		}
+	row := db.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
+	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "url not found"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "url not found"})
+
+	c.IndentedJSON(http.StatusOK, result)
 }
 
 func hashKey(url string) string {
@@ -85,6 +123,14 @@ func hashKey(url string) string {
 }
 
 func main() {
+	var err error
+	db, err = sql.Open("sqlite3", "./test_db.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected!")
+
 	router := gin.Default()
 	router.GET("/api/urls/", getURLs)
 	router.GET("/:key", getURLByKey)
