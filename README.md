@@ -1,39 +1,34 @@
-# frontend
+# URL Shortener
 
-This template should help get you started developing with Vue 3 in Vite.
+A URL shortener.
 
-## Recommended IDE Setup
+## Overview
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+The URL Shortener app is my attempt at learning fullstack development while using different backends. The application is currently written in VueJS, Golang and Python.
 
-## Type Support for `.vue` Imports in TS
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+## Installation
+Requires Node.js, Go and Python 3.9 or higher to be installed on your machine.
+### Clone Repo
+Clone the repo as follows.
+```bash
+$ git clone https://github.com/ThePfarrer/url_shortner.git
+$ cd url_shortner/
+```
+### Vue + Go
+To build and run the application using the Golang backend, run the following command:
+```bash
+$ make go
+```
+### Vue + Python
+To build and run the application using the Python backend, run the following command:
+```bash
+$ make py
 ```
 
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
+### Clean Up
+Run the following command to terminate and clean up:
+```bash
+$ make stop
+$ make clean
 ```
