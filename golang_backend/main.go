@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+
+	"thepfarrer/url-shortner/database"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,12 +24,10 @@ type urlArgs struct {
 	URL string `json:"url" binding:"required"`
 }
 
-var db *sql.DB
-
 func getURLs(c *gin.Context) {
 	var urls []url
 
-	rows, err := db.Query("SELECT key, long_url, short_url FROM url_model")
+	rows, err := database.DB.Query("SELECT key, long_url, short_url FROM url_model")
 	if err != nil {
 		log.Fatalf("Error: %q", err)
 		return
@@ -66,7 +64,7 @@ func postURLs(c *gin.Context) {
 	key := hashKey(inputURL.URL)
 	var result url
 
-	row := db.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
+	row := database.DB.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
 	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
 	if err == nil {
 		if longUrl == result.LongUrl {
@@ -79,7 +77,7 @@ func postURLs(c *gin.Context) {
 
 	shortUrl := baseUrl + key
 
-	_, err = db.Exec("INSERT INTO url_model (key, long_url, short_url) VALUES (?,?,?)", key, longUrl, shortUrl)
+	_, err = database.DB.Exec("INSERT INTO url_model (key, long_url, short_url) VALUES (?,?,?)", key, longUrl, shortUrl)
 	if err != nil {
 		log.Print(err)
 		return
@@ -101,7 +99,7 @@ func getURLByKey(c *gin.Context) {
 	key := c.Param("key")
 	var result url
 
-	row := db.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
+	row := database.DB.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
 	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "url not found"})
@@ -115,7 +113,7 @@ func getURLByKey(c *gin.Context) {
 func deleteURLByKey(c *gin.Context) {
 	key := c.Param("key")
 
-	_, err := db.Exec("DELETE FROM url_model WHERE key = ?", key)
+	_, err := database.DB.Exec("DELETE FROM url_model WHERE key = ?", key)
 	if err != nil {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "url not found"})
 		return
@@ -132,13 +130,9 @@ func hashKey(url string) string {
 }
 
 func main() {
-	var err error
-	db, err = sql.Open("sqlite3", "./test_db.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Connected!")
+	// Initialize the database
+	database.InitDB()
+	defer database.DB.Close()
 
 	router := gin.Default()
 
