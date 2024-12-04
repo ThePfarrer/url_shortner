@@ -10,6 +10,8 @@
     "golang": "vite --mode golang",
     "python": "vite --mode python",
     "build-only": "vite build",
+    "build-only:python": "vite build --mode python",
+    "build-only:golang": "vite build --mode golang",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
