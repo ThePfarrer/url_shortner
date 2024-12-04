@@ -7,23 +7,14 @@ import (
 	"net/http"
 
 	"thepfarrer/url-shortner/database"
+	"thepfarrer/url-shortner/models"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/blake2b"
 )
 
-type url struct {
-	Key      string `json:"key"`
-	LongUrl  string `json:"long_url"`
-	ShortUrl string `json:"short_url"`
-}
-
-type urlArgs struct {
-	URL string `json:"url" binding:"required"`
-}
-
 func GetURLs(c *gin.Context) {
-	var urls []url
+	var urls []models.URL
 
 	rows, err := database.DB.Query("SELECT key, long_url, short_url FROM url_model")
 	if err != nil {
@@ -33,7 +24,7 @@ func GetURLs(c *gin.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var row url
+		var row models.URL
 		err = rows.Scan(&row.Key, &row.LongUrl, &row.ShortUrl)
 		if err != nil {
 			log.Fatal(err)
@@ -49,7 +40,7 @@ func GetURLs(c *gin.Context) {
 }
 
 func PostURLs(c *gin.Context) {
-	var inputURL urlArgs
+	var inputURL models.UrlArgs
 
 	if err := c.BindJSON(&inputURL); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -60,7 +51,7 @@ func PostURLs(c *gin.Context) {
 	baseUrl := "http://localhost:8080/"
 
 	key := hashKey(inputURL.URL)
-	var result url
+	var result models.URL
 
 	row := database.DB.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
 	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
@@ -81,7 +72,7 @@ func PostURLs(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, url{Key: key, LongUrl: longUrl, ShortUrl: shortUrl})
+	c.IndentedJSON(http.StatusCreated, models.URL{Key: key, LongUrl: longUrl, ShortUrl: shortUrl})
 }
 
 func randomString(length int) string {
@@ -95,7 +86,7 @@ func randomString(length int) string {
 
 func GetURLByKey(c *gin.Context) {
 	key := c.Param("key")
-	var result url
+	var result models.URL
 
 	row := database.DB.QueryRow("SELECT key, long_url, short_url FROM url_model WHERE key = ?", key)
 	err := row.Scan(&result.Key, &result.LongUrl, &result.ShortUrl)
